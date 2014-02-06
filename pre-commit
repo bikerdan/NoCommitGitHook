@@ -1,0 +1,42 @@
+#!/usr/bin/php
+<?php
+
+$filename_pattern = '/\.(js|view|act|get|php|inc|controller)$/';
+$no_match_pattern = '/\/\/\s*NOCOMMIT\s*:(.*)/';
+$output = array();
+$matches = array();
+$exit_status = 0; // 1 = fail, 0 = success
+
+echo ("\nChecking files for NOCOMMIT...\n");
+exec("git diff-index --cached --name-only HEAD", $output);
+
+// Process all files found for this commit
+foreach ($output as $file) {
+
+    // don't check files that aren't PHP
+    if (!preg_match($filename_pattern, $file)) {
+        continue;
+    }
+
+    // Search the file contents to see if it matches the pattern
+    $file_contents = file_get_contents($file);
+    $result = preg_match_all($no_match_pattern, $file_contents, $matches);
+
+    // If results were found.  Loop over them and display them.
+    if ($result != 0) {
+        for ($i=1; $i<count($matches); $i++) {
+            for ($r=0; $r<count($matches[$i]); $r++) {
+                echo("NOCOMMIT found in file [$file]: {$matches[$i][$r]}\n");
+            }
+        }
+        $exit_status = 1;
+    }
+}
+
+if ($exit_status == 1) {
+        echo ("ABORTING COMMIT!\n\n");
+} else {
+        echo ("All files clean.  NOCOMMIT not found.\n\n");
+}
+
+exit($exit_status);
